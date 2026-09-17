@@ -1,48 +1,3 @@
-"""
-AI3403 Multi-Agent Systems - Assignment 3 - Problem 2
-Distributed estimation of a randomly-walking target z(t) in R^3 using
-N drones connected over an Erdos-Renyi graph (with a spanning tree, so it
-is connected), each carrying one noisy range-type sensor.
-
-Model
------
-    z(t+1) = z(t) + w(t),        w(t) ~ N(0, Sigma_w)
-    y_i(t) = x_i - z(t) + v_i(t), v_i(t) ~ N(0, Sigma_v^(i)), independent across i
-
-Part 1 - consensus-optimization formulation
---------------------------------------------
-At a fixed time t, every drone i observes y_i(t). Treat z(t) as the unknown
-to be estimated; drone i's local negative-log-likelihood cost is
-
-    f_i(z) = 1/2 * (y_i(t) - (x_i - z))^T (Sigma_v^(i))^{-1} (y_i(t) - (x_i - z))
-
-The distributed estimation problem is posed as the consensus-constrained
-optimization
-
-    min_{z_1,...,z_N}  sum_{i=1}^N f_i(z_i)
-    s.t.               z_i = z_j   for all (i,j) in E
-
-i.e. every agent keeps a *local copy* z_i of the target state and the graph
-topology enforces agreement only through the edges of G.
-
-Part 2 - distributed algorithm
---------------------------------
-We use Distributed Gradient Tracking (DGT), which (unlike plain distributed
-gradient descent) converges *exactly* to the centralized weighted least
-squares solution with a constant step size alpha:
-
-    z_i^{k+1} = sum_j w_ij z_j^k - alpha * s_i^k
-    s_i^{k+1} = sum_j w_ij s_j^k + grad f_i(z_i^{k+1}) - grad f_i(z_i^k)
-    s_i^0 = grad f_i(z_i^0)
-
-where grad f_i(z) = (Sigma_v^(i))^{-1} (z - (x_i - y_i(t))), and W=[w_ij] is
-a doubly-stochastic Metropolis-Hastings weight matrix built from G.
-
-The (centralized) closed-form fused estimate this should converge to is the
-information-weighted average
-    z_hat = (sum_i Sigma_v^(i)^{-1})^{-1} sum_i Sigma_v^(i)^{-1} (x_i - y_i(t))
-which we use below purely to *check* that DGT has converged correctly.
-"""
 import numpy as np
 import networkx as nx
 import matplotlib
@@ -52,14 +7,12 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
 rng = np.random.default_rng(42)
 
-# ============================== SETTINGS ====================================
+# SETTINGS
 N = 8                 # number of drones (< 20)
 P_ER = 0.4
 T_MAX = 40             # number of time steps to simulate
 DGT_ITERS = 200        # inner consensus iterations per time step
 ALPHA = 0.05           # DGT step size
-# =============================================================================
-
 
 def connected_er_with_spanning_tree(n, p, seed):
     """Erdos-Renyi graph guaranteed to contain a spanning tree (i.e. connected)."""
@@ -84,14 +37,11 @@ def metropolis_weights(G):
         W[i, i] = 1 - W[i].sum()
     assert np.allclose(W.sum(axis=1), 1) and np.allclose(W.sum(axis=0), 1)
     return W
-
-
-# ---------------------------------------------------------------- 1) graph
+# 1) graph
 G = connected_er_with_spanning_tree(N, P_ER, seed=1)
 W = metropolis_weights(G)
 print("Graph connected:", nx.is_connected(G), "edges:", G.number_of_edges())
-
-# --------------------------------------------- 2) fixed sensors / noise model
+# 2) fixed sensors / noise model
 x_sensors = rng.uniform(-10, 10, size=(N, 3))          # fixed drone locations
 Sigma_v = [np.diag(rng.uniform(0.3, 1.5, size=3)) for _ in range(N)]   # per-sensor noise cov
 Sigma_v_inv = [np.linalg.inv(S) for S in Sigma_v]
@@ -123,9 +73,7 @@ def dgt_estimate(y_t, iters=DGT_ITERS, alpha=ALPHA):
         s = W @ s + grads_new - grads_old
         z = z_new
     return z.mean(axis=0), z  # consensus average, and per-agent copies
-
-
-# ---------------------------------------------------------- 3) simulate
+#3) simulate
 z_true = np.zeros((T_MAX + 1, 3))
 z_hat = np.zeros((T_MAX + 1, 3))
 z_true[0] = z0
@@ -144,8 +92,7 @@ for t in range(T_MAX + 1):
 
 error = z_hat - z_true
 print("RMS estimation error over time:", np.sqrt(np.mean(np.sum(error ** 2, axis=1))))
-
-# ---------------------------------------------------------- 4) plots
+#4) plots
 fig = plt.figure(figsize=(14, 5))
 
 ax1 = fig.add_subplot(1, 3, 1, projection="3d")
