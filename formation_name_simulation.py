@@ -8,18 +8,16 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-# ============================== USER SETTINGS ==============================
-NAME = "RUTHVIK"        # <-- CHANGE to the name/nickname you go by (capitals)
+#  USER SETTINGS
+NAME = "RUTHVIK"        # go by (capitals)
 N = 20                # number of agents (fixed by the assignment statement)
 P_ER = 0.3             # Erdos-Renyi edge probability
 DT = 0.03              # integration step
 STEPS_PER_LETTER = 220 # simulation steps allotted to converge onto each letter
 SEED = 7
 OUT_MP4 = "name_formation.mp4"
-# =============================================================================
 
 rng = np.random.default_rng(SEED)
-
 
 def letter_to_points(letter, n_points, seed=0):
     """Sample n_points random points inside the filled glyph of `letter`."""
@@ -43,7 +41,6 @@ def letter_to_points(letter, n_points, seed=0):
     pts -= pts.mean(axis=0)
     return pts
 
-
 def connected_erdos_renyi(n, p, seed):
     g = nx.erdos_renyi_graph(n, p, seed=seed)
     trial = seed
@@ -52,7 +49,6 @@ def connected_erdos_renyi(n, p, seed):
         g = nx.erdos_renyi_graph(n, p, seed=trial)
     return g
 
-
 def assign(current_x, target_pts):
     """Hungarian-algorithm (min total squared distance) matching of agents
     to target points, so the formation transition has minimal crossings."""
@@ -60,8 +56,7 @@ def assign(current_x, target_pts):
     row, col = linear_sum_assignment(cost)
     return target_pts[col]
 
-
-# ---------------------------------------------------------------- 1) graph
+# 1) graph
 G = connected_erdos_renyi(N, P_ER, SEED)
 A = nx.to_numpy_array(G)
 pos_graph = nx.spring_layout(G, seed=SEED)
@@ -76,14 +71,14 @@ plt.close(fig0)
 
 leader = 0
 
-# --------------------------------------------------------- 2) letter shapes
+# 2) letter shapes
 letter_targets = [letter_to_points(ch, N, seed=100 + k) * 3.0
                    for k, ch in enumerate(NAME)]
 
-# ------------------------------------------------ 3) random initial layout
+#  3) random initial layout
 x0 = rng.uniform(-6, 6, size=(N, 2))
 
-# ---------------------------------------------------------- 4) simulate
+# 4) simulate
 trajectory = [x0.copy()]
 x = x0.copy()
 letter_hit_frame = []
@@ -106,7 +101,7 @@ for pts in letter_targets:
 trajectory = np.array(trajectory)
 print("Total animation frames:", trajectory.shape[0])
 
-# ---------------------------------------------------------- 5) animate
+# 5) animate
 all_x = trajectory[..., 0]
 all_y = trajectory[..., 1]
 xlim = (all_x.min() - 1, all_x.max() + 1)
