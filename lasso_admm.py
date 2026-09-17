@@ -1,22 +1,7 @@
-"""
-AI3403 Multi-Agent Systems - Assignment 3 - Problem 4
-LASSO via ADMM:   min_x  1/2||Ax-b||^2 + lambda*||x||_1
-
-Split as: min_{x,z} 1/2||Ax-b||^2 + lambda||z||_1  s.t. x - z = 0
-Scaled-dual ADMM updates (rho = penalty parameter, u = scaled dual variable):
-
-    x^{k+1} = (A^T A + rho I)^{-1} (A^T b + rho (z^k - u^k))
-    z^{k+1} = S_{lambda/rho}(x^{k+1} + u^k)     [soft-thresholding]
-    u^{k+1} = u^k + x^{k+1} - z^{k+1}
-
-    S_kappa(a)_i = sign(a_i) * max(|a_i| - kappa, 0)
-"""
 import numpy as np
-
 
 def soft_threshold(a, kappa):
     return np.sign(a) * np.maximum(np.abs(a) - kappa, 0.0)
-
 
 def lasso_admm(A, b, lam, rho=1.0, n_iters=300, tol=1e-8):
     n = A.shape[1]
@@ -41,7 +26,6 @@ def lasso_admm(A, b, lam, rho=1.0, n_iters=300, tol=1e-8):
         if primal_res < tol:
             break
     return x, z, history
-
 
 if __name__ == "__main__":
     rng = np.random.default_rng(0)
