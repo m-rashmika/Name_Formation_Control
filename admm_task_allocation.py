@@ -1,50 +1,3 @@
-"""
-AI3403 Multi-Agent Systems - Assignment 3 - Problem 3
-Distributed task allocation with capacity constraints, solved with ADMM
-over a communication graph G(V,E).
-
-Formulation
------------
-N agents, M>N tasks, cost c_ij for agent i doing task j, capacities b_i with
-sum_i b_i = M. Decision variable X in R^{N x M}, X_ij = fraction (relaxed
-from {0,1}) of task j given to agent i.
-
-    min_X   sum_{i,j} C_ij X_ij
-    s.t.    sum_j X_ij = b_i      for all i     (agent i's capacity, LOCAL)
-            sum_i X_ij = 1        for all j     (task j done exactly once, GLOBAL/coupling)
-            0 <= X_ij <= 1                       (LP relaxation of the binary program)
-
-This is a transportation-polytope LP (an NP-hard 0/1 program in general,
-convex-relaxed here as instructed). We split it for ADMM by giving every
-agent i its own local copy x_i in R^M (row i of X) with two auxiliary
-"consensus" copies:
-
-    min_{x_i, z}  sum_i c_i^T x_i
-    s.t.          x_i in P_i := { x_i : sum_j x_ij = b_i, 0<=x_ij<=1 }   (local, agent-i-only)
-                  x_i = z_i   for all i                                  (copy)
-                  sum_i z_i = 1 (vector of ones)                         (global coupling)
-
-ADMM updates (rho = penalty parameter):
-
-  x_i update (local projection onto capacity polytope P_i):
-      x_i^{k+1} = argmin_{x_i in P_i} c_i^T x_i + (rho/2)||x_i - z_i^k + u_i^k||^2
-
-  z update (projection of the *stacked* copies onto the "sum-to-one" hyperplane
-  for every task column j) -- this needs the SUM over all agents, so on a graph
-  with only local communication we realize it by running a short distributed
-  AVERAGE-CONSENSUS sub-iteration over G (Metropolis-Hastings weights) instead
-  of a centralized sum:
-      v_i^{k+1} = x_i^{k+1} + u_i^k
-      (v_bar)_j  ~= average_i (v_i^{k+1})_j    obtained via consensus over G
-      z_i^{k+1} = v_i^{k+1} + (1 - N * v_bar)/N     for every i  (closed form
-                     projection of the stacked vector onto {sum_i z_i = 1})
-
-  u_i update (scaled dual variable):
-      u_i^{k+1} = u_i^k + x_i^{k+1} - z_i^{k+1}
-
-The x_i-update (projection onto a "capacity simplex" b_i*Delta_M intersected
-with the box) is solved with a standard O(M log M) simplex/box projection.
-"""
 import numpy as np
 import networkx as nx
 import matplotlib
@@ -52,9 +5,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 rng = np.random.default_rng(3)
-
-
-# ------------------------------------------------------------ graph helpers
+# graph helpers
 def connected_er(n, p, seed):
     g = nx.erdos_renyi_graph(n, p, seed=seed)
     trial = seed
@@ -101,10 +52,6 @@ def project_box_capacity_simplex(a, b):
     x = np.clip(a - 0.5 * (lo + hi), 0, 1)
     return x
 
-
-# =============================================================================
-# Problem instance
-# =============================================================================
 def run_instance(N, M, C, b, graph_seed=0, rho=1.0, admm_iters=150, consensus_iters=80):
     assert M > N
     assert b.sum() == M and (b >= 0).all()
@@ -174,7 +121,7 @@ if __name__ == "__main__":
     print("  #tasks reassigned to a different agent vs cost matrix #1:",
           int(np.sum(assign1 != assign2)))
 
-    # ------------------------------------------------------------- plots
+    #  plots
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
     nx.draw(G, nx.spring_layout(G, seed=1), ax=axes[0, 0], with_labels=True,
